@@ -1,0 +1,11 @@
+# OS files
+.DS_Store
+
+# IDE files
+.idea
+*.iml
+.vscode
+.claude
+
+# Output of go coverage
+*.out

@@ -1,0 +1,79 @@
+name: Run
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1'
+
+      - name: Vet
+        run: go vet -v ./...
+
+      - name: Test
+        run: go test -v -race -timeout=5m ./...
+
+  adapters_and_examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Vet Adapters
+        run: |
+          find ./adapters -type f -name "go.mod" -exec dirname {} \; | while read -r dir; do
+            echo "Running go vet in $dir"
+            (cd "$dir" && go vet ./...)
+          done
+
+      - name: Vet Examples
+        run: |
+          find ./_examples -type f -name "go.mod" -exec dirname {} \; | while read -r dir; do
+            echo "Running go vet in $dir"
+            (cd "$dir" && go vet ./...)
+          done
+
+  integration_tests:
+    name: Integration Tests (Testcontainers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Check Docker availability
+        run: |
+          docker --version
+          docker info
+
+      - name: Test Kafka Adapter with Testcontainers
+        run: |
+          cd ./adapters/kafkastreamer
+          echo "Testing Kafka adapter with testcontainers..."
+          go test -v -timeout=10m ./...
+
+      - name: Test Redis Adapter with Testcontainers
+        run: |
+          cd ./adapters/wredis
+          echo "Testing Redis adapter with testcontainers..."
+          go test -v -timeout=10m ./...
